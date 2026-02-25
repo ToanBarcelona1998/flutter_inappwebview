@@ -1,4 +1,5 @@
 #include <cstring>
+#include <fstream>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <limits>
@@ -113,19 +114,27 @@ namespace flutter_inappwebview_plugin
           options = nullptr;
           failedLog(env->QueryInterface(IID_PPV_ARGS(&webViewEnv3)));
         }
-#ifdef NDEBUG
-        (void)willBeSurface;
-#else
-        debugLog("[WebView2] willBeSurface=" + std::string(willBeSurface ? "true" : "false")
-          + " hasEnv3=" + std::string(webViewEnv3 ? "true" : "false")
-          + " hasEnv10=" + std::string(webViewEnv10 ? "true" : "false"));
+        {
+          const std::string line1 = "[WebView2] willBeSurface=" + std::string(willBeSurface ? "true" : "false")
+            + " hasEnv3=" + std::string(webViewEnv3 ? "true" : "false")
+            + " hasEnv10=" + std::string(webViewEnv10 ? "true" : "false");
+#ifndef NDEBUG
+          debugLog(line1);
 #endif
+          try {
+            std::ofstream f(std::filesystem::temp_directory_path() / "webview2_controller_path.txt", std::ios::out | std::ios::trunc);
+            if (f) f << line1 << std::endl;
+          } catch (...) {}
+        }
         if (willBeSurface && (webViewEnv10 || webViewEnv3)) {
-#ifdef NDEBUG
-          (void)0;
-#else
-          debugLog("[WebView2] Using Composition Controller (ICoreWebView2CompositionController) - no child HWND");
+          const std::string line2 = "[WebView2] Using Composition Controller (ICoreWebView2CompositionController) - no child HWND";
+#ifndef NDEBUG
+          debugLog(line2);
 #endif
+          try {
+            std::ofstream f(std::filesystem::temp_directory_path() / "webview2_controller_path.txt", std::ios::out | std::ios::app);
+            if (f) f << line2 << std::endl;
+          } catch (...) {}
           if (webViewEnv10 && options) {
             failedLog(webViewEnv10->CreateCoreWebView2CompositionControllerWithOptions(parentWindow, options.get(), Callback<ICoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler>(
               [completionHandler, env](HRESULT result, wil::com_ptr<ICoreWebView2CompositionController> compositionController) -> HRESULT
@@ -174,11 +183,14 @@ namespace flutter_inappwebview_plugin
           }
         }
         else {
-#ifdef NDEBUG
-          (void)0;
-#else
-          debugLog("[WebView2] Fallback to Controller (CreateCoreWebView2Controller) - WebView2 will create child HWND");
+          const std::string line3 = "[WebView2] Fallback to Controller (CreateCoreWebView2Controller) - WebView2 will create child HWND";
+#ifndef NDEBUG
+          debugLog(line3);
 #endif
+          try {
+            std::ofstream f(std::filesystem::temp_directory_path() / "webview2_controller_path.txt", std::ios::out | std::ios::app);
+            if (f) f << line3 << std::endl;
+          } catch (...) {}
           if (webViewEnv10 && options) {
             failedLog(webViewEnv10->CreateCoreWebView2ControllerWithOptions(parentWindow, options.get(), Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
               [completionHandler, env](HRESULT result, wil::com_ptr<ICoreWebView2Controller> controller) -> HRESULT
