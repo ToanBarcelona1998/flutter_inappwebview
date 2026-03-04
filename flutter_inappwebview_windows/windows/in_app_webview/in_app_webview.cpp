@@ -99,10 +99,44 @@ namespace flutter_inappwebview_plugin
   {
     auto callback = [parentWindow, willBeSurface, completionHandler, initialSettings](HRESULT result, wil::com_ptr<ICoreWebView2Environment> env) -> HRESULT
       {
+        static std::filesystem::path s_logPath;
+        auto writeWebView2Log = [&s_logPath](const std::string& line, bool trunc) {
+          try {
+            std::filesystem::path path;
+            if (s_logPath.empty() || trunc) {
+              wchar_t buf[32768];
+              if (GetModuleFileNameW(NULL, buf, 32768) != 0) {
+                path = std::filesystem::path(buf).parent_path() / "webview2_controller_path.txt";
+                std::ofstream t(path, std::ios::out | std::ios::trunc);
+                if (!t) path.clear();
+                else t.close();
+              }
+              if (path.empty()) {
+                wchar_t tempPath[MAX_PATH];
+                if (GetTempPathW(MAX_PATH, tempPath) != 0)
+                  path = std::filesystem::path(tempPath) / "webview2_controller_path.txt";
+              }
+              if (!path.empty()) s_logPath = path;
+            } else
+              path = s_logPath;
+            if (!path.empty()) {
+              std::ofstream f(path, std::ios::out | (trunc ? std::ios::trunc : std::ios::app));
+              if (f) {
+                if (trunc) f << "file_location: " << path.string() << std::endl;
+                f << line << std::endl;
+                f.flush();
+                f.close();
+              }
+            }
+          } catch (...) {}
+        };
+
         if (failedAndLog(result) || !env) {
+          writeWebView2Log("[WebView2] createInAppWebViewEnv callback: env failed or null", true);
           completionHandler(nullptr, nullptr, nullptr);
           return E_FAIL;
         }
+        writeWebView2Log("[WebView2] createInAppWebViewEnv callback entered (env OK)", true);
 
         wil::com_ptr<ICoreWebView2Environment3> webViewEnv3;
         wil::com_ptr<ICoreWebView2Environment10> webViewEnv10;
@@ -115,16 +149,6 @@ namespace flutter_inappwebview_plugin
           options = nullptr;
           failedLog(env->QueryInterface(IID_PPV_ARGS(&webViewEnv3)));
         }
-        auto writeWebView2Log = [](const std::string& line, bool trunc) {
-          try {
-            wchar_t buf[32768];
-            if (GetModuleFileNameW(NULL, buf, 32768) == 0) return;
-            std::filesystem::path path(buf);
-            path = path.parent_path() / "webview2_controller_path.txt";
-            std::ofstream f(path, std::ios::out | (trunc ? std::ios::trunc : std::ios::app));
-            if (f) { f << line << std::endl; f.flush(); f.close(); }
-          } catch (...) {}
-        };
         {
           const std::string line1 = "[WebView2] willBeSurface=" + std::string(willBeSurface ? "true" : "false")
             + " hasEnv3=" + std::string(webViewEnv3 ? "true" : "false")

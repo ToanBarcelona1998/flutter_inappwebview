@@ -1,12 +1,31 @@
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import '../platform_util.dart';
 import '_static_channel.dart';
+
+Future<void> _appendDartInAppWebViewLog(String message) async {
+  try {
+    final dir = Directory('webview_logs');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    final file = File('${dir.path}/inappwebview_windows_dart.log');
+    final sink = file.openWrite(mode: FileMode.append);
+    sink.writeln(
+      '${DateTime.now().toIso8601String()} [InAppWebView][Windows] $message',
+    );
+    await sink.flush();
+    await sink.close();
+  } catch (_) {
+    // ignore logging errors
+  }
+}
 
 const Map<String, SystemMouseCursor> _cursors = {
   'none': SystemMouseCursors.none,
@@ -127,10 +146,16 @@ class CustomPlatformViewController
     if (_isDisposed) {
       return;
     }
+    await _appendDartInAppWebViewLog(
+      'CustomPlatformViewController.initialize: calling createInAppWebView with arguments=$arguments',
+    );
     _textureId = (await _pluginChannel.invokeMethod<int>(
       'createInAppWebView',
       arguments,
     ))!;
+    await _appendDartInAppWebViewLog(
+      'CustomPlatformViewController.initialize: created platform view with textureId=$_textureId',
+    );
 
     _methodChannel = MethodChannel(
       'com.pichillilorenzo/custom_platform_view_$_textureId',
