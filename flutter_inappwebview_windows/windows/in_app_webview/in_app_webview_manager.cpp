@@ -15,6 +15,19 @@
 #include "../webview_environment/webview_environment_manager.h"
 #include "in_app_webview_manager.h"
 
+namespace {
+  LRESULT CALLBACK InAppWebViewHostWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+  {
+    switch (msg) {
+    case WM_MOUSEACTIVATE:
+      // Keep main window active when interacting with embedded WebView host.
+      return MA_NOACTIVATE;
+    default:
+      return DefWindowProc(hwnd, msg, wparam, lparam);
+    }
+  }
+}
+
 namespace flutter_inappwebview_plugin
 {
   InAppWebViewManager::InAppWebViewManager(const FlutterInappwebviewWindowsPlugin* plugin)
@@ -53,7 +66,7 @@ namespace flutter_inappwebview_plugin
     }
 
     windowClass_.lpszClassName = CustomPlatformView::CLASS_NAME;
-    windowClass_.lpfnWndProc = &DefWindowProc;
+    windowClass_.lpfnWndProc = &InAppWebViewHostWindowProc;
     windowClass_.style |= CS_NOCLOSE;
 
     RegisterClass(&windowClass_);
