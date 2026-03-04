@@ -383,13 +383,8 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      focusNode: _focusNode,
-      canRequestFocus: true,
-      debugLabel: "flutter_inappwebview_windows_custom_platform_view",
-      onFocusChange: (focused) {},
-      child: SizedBox.expand(key: _key, child: _buildInner()),
-    );
+    // Trên Windows, tránh để Focus của Flutter tranh chấp với focus native.
+    return SizedBox.expand(key: _key, child: _buildInner());
   }
 
   Widget _buildInner() {

@@ -196,11 +196,19 @@ namespace flutter_inappwebview_plugin
     RECT bounds;
     GetClientRect(plugin->registrar->GetView()->GetNativeWindow(), &bounds);
 
-    auto hwnd = CreateWindowEx(0, windowClass_.lpszClassName, L"", 0, 0,
-      0, bounds.right - bounds.left, bounds.bottom - bounds.top,
+    auto hwnd = CreateWindowEx(
+      WS_EX_NOACTIVATE,
+      windowClass_.lpszClassName,
+      L"",
+      WS_CHILD,
+      0,
+      0,
+      bounds.right - bounds.left,
+      bounds.bottom - bounds.top,
       plugin->registrar->GetView()->GetNativeWindow(),
       nullptr,
-      windowClass_.hInstance, nullptr);
+      windowClass_.hInstance,
+      nullptr);
 
     if (keepAliveId.has_value() && map_contains(keepAliveWebViews, keepAliveId.value())) {
       auto webView = std::move(keepAliveWebViews.at(keepAliveId.value())->view);
