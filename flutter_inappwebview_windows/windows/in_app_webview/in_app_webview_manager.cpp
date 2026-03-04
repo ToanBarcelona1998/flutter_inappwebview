@@ -3,6 +3,10 @@
 #include <flutter/standard_method_codec.h>
 #include <shlobj.h>
 #include <windows.graphics.capture.h>
+#include <Windows.h>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 
 #include "../in_app_webview/in_app_webview_settings.h"
 #include "../plugin_scripts_js/javascript_bridge_js.h"
@@ -16,15 +20,71 @@
 #include "in_app_webview_manager.h"
 
 namespace {
+  void writeFocusLog(const std::string& line)
+  {
+    try {
+      static std::filesystem::path s_focusPath;
+      std::filesystem::path path;
+
+      if (s_focusPath.empty()) {
+        // Try next to the executable first.
+        wchar_t exeBuf[32768];
+        if (GetModuleFileNameW(nullptr, exeBuf, 32768) != 0) {
+          path = std::filesystem::path(exeBuf).parent_path() / L"webview_focus_windows.txt";
+          std::ofstream test(path, std::ios::out | std::ios::trunc);
+          if (!test) {
+            path.clear();
+          }
+        }
+        // Fallback to %TEMP% if exe folder is not writable.
+        if (path.empty()) {
+          wchar_t tempPath[MAX_PATH];
+          if (GetTempPathW(MAX_PATH, tempPath) != 0) {
+            path = std::filesystem::path(tempPath) / L"webview_focus_windows.txt";
+          }
+        }
+        if (!path.empty()) {
+          s_focusPath = path;
+        }
+      } else {
+        path = s_focusPath;
+      }
+
+      if (!path.empty()) {
+        std::ofstream f(path, std::ios::out | std::ios::app);
+        if (f) {
+          f << line << std::endl;
+          f.flush();
+        }
+      }
+    } catch (...) {
+      // Never crash because of logging.
+    }
+  }
+
   LRESULT CALLBACK InAppWebViewHostWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   {
     switch (msg) {
     case WM_MOUSEACTIVATE:
+      writeFocusLog("[HostHWND] WM_MOUSEACTIVATE -> MA_NOACTIVATE");
       // Keep main window active when interacting with embedded WebView host.
       return MA_NOACTIVATE;
-    default:
-      return DefWindowProc(hwnd, msg, wparam, lparam);
+    case WM_SETFOCUS:
+      writeFocusLog("[HostHWND] WM_SETFOCUS");
+      break;
+    case WM_KILLFOCUS:
+      writeFocusLog("[HostHWND] WM_KILLFOCUS");
+      break;
+    case WM_ACTIVATE: {
+      std::ostringstream oss;
+      oss << "[HostHWND] WM_ACTIVATE wParam=" << LOWORD(wparam);
+      writeFocusLog(oss.str());
+      break;
     }
+    default:
+      break;
+    }
+    return DefWindowProc(hwnd, msg, wparam, lparam);
   }
 }
 

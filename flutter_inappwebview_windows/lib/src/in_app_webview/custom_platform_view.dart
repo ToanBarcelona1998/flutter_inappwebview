@@ -384,7 +384,6 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
   @override
   Widget build(BuildContext context) {
     return Focus(
-      autofocus: true,
       focusNode: _focusNode,
       canRequestFocus: true,
       debugLabel: "flutter_inappwebview_windows_custom_platform_view",
@@ -418,11 +417,6 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
 
                   if (!_focusNode.hasFocus) {
                     _focusNode.requestFocus();
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      if (!_focusNode.hasFocus) {
-                        _focusNode.requestFocus();
-                      }
-                    });
                   }
 
                   _pointerKind = ev.kind;
